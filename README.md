@@ -1,1 +1,1 @@
-# cube_scan
+# scanner_cube
