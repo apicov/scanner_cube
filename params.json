@@ -1,15 +1,15 @@
 {
- "agent": { "decay_steps": 800, 
-            "target_update_period": 10, 
+ "agent": { "decay_steps": 13000, 
+            "target_update_period": 40 , 
             "gamma": 0.99},
 
- "rbuffer"   : {"max_length": 4000,
-                "sample_batch_size" : 8},
+ "rbuffer"   : {"max_length": 2000,
+                "sample_batch_size" : 16},
 
- "rnd_policy" : {   "num_steps": 5000 },
+ "rnd_policy" : {   "num_steps": 1000 },
  
 
- "collect_driver" : { "num_steps" : 40},
+ "collect_driver" : { "num_steps" : 4},
 
 
  "model"  : { "conv2d_1_filters": 0,
@@ -17,7 +17,7 @@
               "learning_rate" : 0.001
             },
             
- "misc" :  { "n_iterations" : 1000
+ "misc" :  { "n_iterations" : 15000
  		},
  		
  "comments" : "_"

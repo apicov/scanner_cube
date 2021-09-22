@@ -5,7 +5,7 @@ import os
 import time
 import glob
 
-parent_dir = "/home/pico/uni/romi/rl_sony/scanner_cube/arabidopsis_im_bigger/"
+parent_dir = "/home/pico/uni/romi/scanner_cube/arabidopsis_im_bigger/"
 
 dirs = sorted ( glob.glob(os.path.join(parent_dir, '*')) )
 d_file = 'params.json'

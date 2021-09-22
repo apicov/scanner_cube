@@ -129,6 +129,12 @@ dmypy.json
 .pyre/
 
 
+#emacs temporary files
+*~
+[#]*[#]
+.\#*
+
+
 ##################################################
 arabidopsis_im_bigger/
 
