@@ -29,7 +29,7 @@ class ScannerEnv(gym.Env):
         self.init_pos_inc_rst = init_pos_inc_rst #if false init position is random, if true, it starts in position 0 and increments by 1 position every reset
         self.init_pos_counter = 0
 
-        self.im_ob_space = gym.spaces.Box(low=-1, high=1, shape=(66,68,152))#, dtype=np.uint8)
+        self.im_ob_space = gym.spaces.Box(low=-1, high=1, shape=(66,68,152), dtype=np.float32)
 
         #current position                                          
         lowl = np.array([0])
@@ -69,7 +69,7 @@ class ScannerEnv(gym.Env):
 
         self.spc = space_carving_2(self.dataset_path)
         self.spc.carve(self.absolute_position) 
-        self.current_state = ( self.spc.sc.values() , (0))
+        self.current_state = ( self.spc.sc.values() , (0)) #self.spc.sc.values().astype('float16')
 
         #get number of -1's (empty space), 0's (undetermined) and 1's (solid) from 3d volume
         h = np.histogram(self.spc.sc.values(), bins=3)[0]
