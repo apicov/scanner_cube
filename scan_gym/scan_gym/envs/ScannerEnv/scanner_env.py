@@ -27,6 +27,7 @@ class ScannerEnv(gym.Env):
     def __init__(self,dataset_path,init_pos_inc_rst=False):
         super(ScannerEnv, self).__init__()
         #self.__version__ = "7.0.1"
+        self.n_images = 10 #number of images that must be collected 
         self.dataset_path = dataset_path
         self.n_positions = 180 #total of posible positions in env
         self.init_pos_inc_rst = init_pos_inc_rst #if false init position is random, if true, it starts in position 0 and increments by 1 position every reset
@@ -39,15 +40,23 @@ class ScannerEnv(gym.Env):
         #lowl = np.array([0])
         #highl = np.array([179])                                           
         #self.vec_ob_space = gym.spaces.Box(lowl, highl, dtype=np.float32)
-        self.vec_ob_space  = spaces.Discrete(self.n_positions)
+        
+        #self.vec_ob_space  = spaces.Discrete(self.n_positions)
+
+        lowl = np.array([-1]*self.n_images)
+        highl = np.array([179]*self.n_images)                                           
+        self.vec_ob_space = gym.spaces.Box(lowl, highl, dtype=np.float32)
 
 
         self.observation_space = gym.spaces.Tuple((self.im_ob_space, self.vec_ob_space))
 
 
 
-        self.actions = {0:90,1:3,2:5,3:11,4:23,5:45,6:-45,7:-23,8:-11,9:-5,10:-3,11:-90}
-        self.action_space = gym.spaces.Discrete(12)
+        self.actions = {0:90,1:3,2:5,3:11,4:23,5:45,6:-45,7:-23,8:-11,9:-5,10:-3}
+        self.action_space = gym.spaces.Discrete(11)
+
+        #self.actions = {0:1,1:3,2:5,3:11,4:23,5:45,6:90,7:135}
+        #self.action_space = gym.spaces.Discrete(8)
 
         #self._spec.id = "Romi-v0"
         self.reset()
@@ -57,7 +66,8 @@ class ScannerEnv(gym.Env):
         self.total_reward = 0
         self.done = False
         self.kept_abs_images = [] #real position of images in dataset
-        self.kept_rel_images = [] #relative position used in environment 
+        self.kept_rel_images = [] #relative position used in environment
+        self.state_rel_images = np.array([-1]*self.n_images) #used as part of state (-1 means empty)
                 
         self.current_position = 0
         
@@ -73,7 +83,9 @@ class ScannerEnv(gym.Env):
         #the image at the beginning position is always kept
         self.kept_rel_images.append(0) #(self.current_position)
         self.absolute_position = self.position_bias #( self.calculate_position(self.current_position,self.position_bias) )
-        self.kept_abs_images.append(self.absolute_position) 
+        self.kept_abs_images.append(self.absolute_position)
+
+        self.state_rel_images[0] = 0 #add first image to state
         
 
         if self.dataset_path == '':
@@ -82,9 +94,9 @@ class ScannerEnv(gym.Env):
         else:
             self.spc = space_carving_2_masks(self.dataset_path)
 
-            
+        
         self.spc.carve(self.absolute_position) 
-        self.current_state = ( self.spc.sc.values() , 0) #self.spc.sc.values().astype('float16')
+        self.current_state = ( self.spc.sc.values() , self.state_rel_images) #self.spc.sc.values().astype('float16')
 
         #get number of -1's (empty space), 0's (undetermined) and 1's (solid) from 3d volume
         h = np.histogram(self.spc.sc.values(), bins=3)[0]
@@ -113,7 +125,10 @@ class ScannerEnv(gym.Env):
         self.absolute_position = self.calculate_position(self.current_position,self.position_bias)
 
         self.kept_rel_images.append(self.current_position)
-        self.kept_abs_images.append(self.absolute_position) 
+        self.kept_abs_images.append(self.absolute_position)
+
+        #add image to position state
+        self.state_rel_images[self.num_steps] = self.current_position
 
         #carve in new position (absolute)
         self.spc.carve(self.absolute_position) 
@@ -127,12 +142,13 @@ class ScannerEnv(gym.Env):
 
         reward = delta / 100.0
 
-        if self.num_steps >= 9:
+        if self.num_steps >= (self.n_images-1):
             self.done = True
            
         self.total_reward += reward
 
-        self.current_state = ( self.spc.sc.values() , self.current_position )
+        #self.current_state = ( self.spc.sc.values() , self.current_position )
+        self.current_state = ( self.spc.sc.values() , self.state_rel_images)
 
         return self.current_state, reward, self.done, {}
 
