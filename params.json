@@ -1,5 +1,5 @@
 {
- "agent": { "decay_steps": 4500, 
+ "agent": { "decay_steps": 80000, 
             "target_update_period": 100 , 
             "gamma": 0.99},
 
@@ -9,7 +9,7 @@
  "rnd_policy" : {   "num_steps": 1000 },
  
 
- "collect_driver" : { "num_steps" : 9},
+ "collect_driver" : { "num_steps" : 17},
 
 
  "model"  : { "conv2d_1_filters": 0,
@@ -17,7 +17,7 @@
               "learning_rate" : 0.001
             },
             
- "misc" :  { "n_iterations" : 5000
+ "misc" :  { "n_iterations" : 100000
  		},
  		
  "comments" : "_"

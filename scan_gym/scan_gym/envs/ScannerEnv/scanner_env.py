@@ -27,7 +27,7 @@ class ScannerEnv(gym.Env):
     def __init__(self,dataset_path,init_pos_inc_rst=False):
         super(ScannerEnv, self).__init__()
         #self.__version__ = "7.0.1"
-        self.n_images = 10 #number of images that must be collected 
+        self.n_images = 18 #number of images that must be collected 
         self.dataset_path = dataset_path
         self.n_positions = 180 #total of posible positions in env
         self.init_pos_inc_rst = init_pos_inc_rst #if false init position is random, if true, it starts in position 0 and increments by 1 position every reset
@@ -50,13 +50,14 @@ class ScannerEnv(gym.Env):
 
         self.observation_space = gym.spaces.Tuple((self.im_ob_space, self.vec_ob_space))
 
+        #self.actions = {0:90,1:3,2:5,3:11,4:23,5:45,6:-45,7:-23,8:-11,9:-5,10:-3}
+        #self.action_space = gym.spaces.Discrete(11)
 
+        #self.action_space = gym.spaces.Discrete(180)
 
-        self.actions = {0:90,1:3,2:5,3:11,4:23,5:45,6:-45,7:-23,8:-11,9:-5,10:-3}
-        self.action_space = gym.spaces.Discrete(11)
-
-        #self.actions = {0:1,1:3,2:5,3:11,4:23,5:45,6:90,7:135}
-        #self.action_space = gym.spaces.Discrete(8)
+        self.actions = {0:1,1:3,2:5,3:11,4:23,5:33,6:45,7:60,8:-60,9:-45,10:-33,11:-23,12:-11,13:-5,14:-3,15:-1,16:90}
+        self.action_space = gym.spaces.Discrete(17)
+        
 
         #self._spec.id = "Romi-v0"
         self.reset()
@@ -99,8 +100,8 @@ class ScannerEnv(gym.Env):
         self.current_state = ( self.spc.sc.values() , self.state_rel_images) #self.spc.sc.values().astype('float16')
 
         #get number of -1's (empty space), 0's (undetermined) and 1's (solid) from 3d volume
-        h = np.histogram(self.spc.sc.values(), bins=3)[0]
-        self.last_vspaces_count = h[0]   #spaces count from last sd volume carving
+        self.h = np.histogram(self.spc.sc.values(), bins=3)[0]
+        self.last_vspaces_count = self.h[0]   #spaces count from last sd volume carving
         
         return self.current_state
 
@@ -123,7 +124,10 @@ class ScannerEnv(gym.Env):
         steps = self.actions[action]
         self.current_position = self.calculate_position(self.current_position, steps)
         self.absolute_position = self.calculate_position(self.current_position,self.position_bias)
-
+        #---------------------------------------------------------------------------------
+        #self.current_position = action
+        #self.absolute_position = self.calculate_position(self.current_position,self.position_bias)
+        #--------------------------------------------------------------------------------------------
         self.kept_rel_images.append(self.current_position)
         self.kept_abs_images.append(self.absolute_position)
 
@@ -134,11 +138,11 @@ class ScannerEnv(gym.Env):
         self.spc.carve(self.absolute_position) 
 
         #get number of -1's (empty space), 0's (undetermined) and 1's (solid) from 3d volume
-        h = np.histogram(self.spc.sc.values(), bins=3)[0]
+        self.h = np.histogram(self.spc.sc.values(), bins=3)[0]
 
         #calculate increment of detected spaces since last carving
-        delta = h[0] - self.last_vspaces_count
-        self.last_vspaces_count = h[0]
+        delta = self.h[0] - self.last_vspaces_count
+        self.last_vspaces_count = self.h[0]
 
         reward = delta / 100.0
 
