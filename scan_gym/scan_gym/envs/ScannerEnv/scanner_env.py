@@ -97,11 +97,14 @@ class ScannerEnv(gym.Env):
 
         
         self.spc.carve(self.absolute_position) 
-        self.current_state = ( self.spc.sc.values() , self.state_rel_images) #self.spc.sc.values().astype('float16')
-
+        
         #get number of -1's (empty space), 0's (undetermined) and 1's (solid) from 3d volume
-        self.h = np.histogram(self.spc.sc.values(), bins=3)[0]
+        vol = self.spc.sc.values()
+        self.h = [np.count_nonzero(vol == -1), np.count_nonzero(vol == 0), np.count_nonzero(vol == 1) ] 
+        #self.h = np.histogram(self.spc.sc.values(), bins=3)[0]
         self.last_vspaces_count = self.h[0]   #spaces count from last sd volume carving
+
+        self.current_state = (vol.astype('float16') , self.state_rel_images) #self.spc.sc.values().astype('float16')
         
         return self.current_state
 
@@ -138,7 +141,9 @@ class ScannerEnv(gym.Env):
         self.spc.carve(self.absolute_position) 
 
         #get number of -1's (empty space), 0's (undetermined) and 1's (solid) from 3d volume
-        self.h = np.histogram(self.spc.sc.values(), bins=3)[0]
+        vol = self.spc.sc.values()
+        self.h = [np.count_nonzero(vol == -1), np.count_nonzero(vol == 0), np.count_nonzero(vol == 1) ] #np.histogram(self.spc.sc.values(), bins=3)[0]
+        #self.h = np.histogram(self.spc.sc.values(), bins=3)[0]
 
         #calculate increment of detected spaces since last carving
         delta = self.h[0] - self.last_vspaces_count
@@ -152,7 +157,7 @@ class ScannerEnv(gym.Env):
         self.total_reward += reward
 
         #self.current_state = ( self.spc.sc.values() , self.current_position )
-        self.current_state = ( self.spc.sc.values() , self.state_rel_images)
+        self.current_state = ( vol.astype('float16') , self.state_rel_images)
 
         return self.current_state, reward, self.done, {}
 
