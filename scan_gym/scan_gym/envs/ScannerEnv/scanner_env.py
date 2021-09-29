@@ -34,7 +34,7 @@ class ScannerEnv(gym.Env):
         self.init_pos_counter = 0
         
         self.volume_shape = (66,68,152)
-        self.im_ob_space = gym.spaces.Box(low=-1, high=1, shape=self.volume_shape, dtype=np.float32)
+        self.im_ob_space = gym.spaces.Box(low=-1, high=1, shape=self.volume_shape, dtype=np.float16)
 
         #current position                                          
         #lowl = np.array([0])
@@ -45,18 +45,18 @@ class ScannerEnv(gym.Env):
 
         lowl = np.array([-1]*self.n_images)
         highl = np.array([179]*self.n_images)                                           
-        self.vec_ob_space = gym.spaces.Box(lowl, highl, dtype=np.float32)
+        self.vec_ob_space = gym.spaces.Box(lowl, highl, dtype=np.int32)
 
 
         self.observation_space = gym.spaces.Tuple((self.im_ob_space, self.vec_ob_space))
 
-        #self.actions = {0:90,1:3,2:5,3:11,4:23,5:45,6:-45,7:-23,8:-11,9:-5,10:-3}
-        #self.action_space = gym.spaces.Discrete(11)
+        self.actions = {0:90,1:3,2:5,3:11,4:23,5:45,6:-45,7:-23,8:-11,9:-5,10:-3}
+        self.action_space = gym.spaces.Discrete(11)
 
         #self.action_space = gym.spaces.Discrete(180)
 
-        self.actions = {0:1,1:3,2:5,3:11,4:23,5:33,6:45,7:60,8:-60,9:-45,10:-33,11:-23,12:-11,13:-5,14:-3,15:-1,16:90}
-        self.action_space = gym.spaces.Discrete(17)
+        #self.actions = {0:1,1:3,2:5,3:11,4:23,5:33,6:45,7:60,8:-60,9:-45,10:-33,11:-23,12:-11,13:-5,14:-3,15:-1,16:90}
+        #self.action_space = gym.spaces.Discrete(17)
         
 
         #self._spec.id = "Romi-v0"
