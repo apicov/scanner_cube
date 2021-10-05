@@ -27,11 +27,13 @@ class ScannerEnv(gym.Env):
     def __init__(self,dataset_path,init_pos_inc_rst=False):
         super(ScannerEnv, self).__init__()
         #self.__version__ = "7.0.1"
-        self.n_images = 18 #number of images that must be collected 
+        self.n_images = 10 #number of images that must be collected 
         self.dataset_path = dataset_path
         self.n_positions = 180 #total of posible positions in env
         self.init_pos_inc_rst = init_pos_inc_rst #if false init position is random, if true, it starts in position 0 and increments by 1 position every reset
         self.init_pos_counter = 0
+
+        self.zeros_test = np.zeros((66,68,152)).astype('float16')
         
         self.volume_shape = (66,68,152)
         self.im_ob_space = gym.spaces.Box(low=-1, high=1, shape=self.volume_shape, dtype=np.float16)
@@ -50,13 +52,13 @@ class ScannerEnv(gym.Env):
 
         self.observation_space = gym.spaces.Tuple((self.im_ob_space, self.vec_ob_space))
 
-        self.actions = {0:90,1:3,2:5,3:11,4:23,5:45,6:-45,7:-23,8:-11,9:-5,10:-3}
-        self.action_space = gym.spaces.Discrete(11)
+        #self.actions = {0:90,1:3,2:5,3:11,4:23,5:45,6:-45,7:-23,8:-11,9:-5,10:-3}
+        #self.action_space = gym.spaces.Discrete(11)
 
         #self.action_space = gym.spaces.Discrete(180)
 
-        #self.actions = {0:1,1:3,2:5,3:11,4:23,5:33,6:45,7:60,8:-60,9:-45,10:-33,11:-23,12:-11,13:-5,14:-3,15:-1,16:90}
-        #self.action_space = gym.spaces.Discrete(17)
+        self.actions = {0:1,1:3,2:5,3:11,4:23,5:33,6:45,7:60,8:-60,9:-45,10:-33,11:-23,12:-11,13:-5,14:-3,15:-1,16:90}
+        self.action_space = gym.spaces.Discrete(17)
         
 
         #self._spec.id = "Romi-v0"
@@ -106,6 +108,10 @@ class ScannerEnv(gym.Env):
 
         self.current_state = (vol.astype('float16') , self.state_rel_images) #self.spc.sc.values().astype('float16')
         
+        #self.current_state = ( self.zeros_test , self.state_rel_images)
+        #self.current_state = ( vol.astype('float16') , np.zeros(self.n_images))
+        #self.current_state = ( self.zeros_test , np.zeros(self.n_images))
+
         return self.current_state
 
 
@@ -149,7 +155,8 @@ class ScannerEnv(gym.Env):
         delta = self.h[0] - self.last_vspaces_count
         self.last_vspaces_count = self.h[0]
 
-        reward = delta / 100.0
+        reward = min(delta,30000) / 30000
+        
 
         if self.num_steps >= (self.n_images-1):
             self.done = True
@@ -157,7 +164,15 @@ class ScannerEnv(gym.Env):
         self.total_reward += reward
 
         #self.current_state = ( self.spc.sc.values() , self.current_position )
+
+        
         self.current_state = ( vol.astype('float16') , self.state_rel_images)
+
+
+
+        #self.current_state = ( self.zeros_test , self.state_rel_images)
+        #self.current_state = ( vol.astype('float16') , np.zeros(self.n_images))
+        #self.current_state = ( self.zeros_test , np.zeros(self.n_images))
 
         return self.current_state, reward, self.done, {}
 
