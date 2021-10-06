@@ -155,7 +155,7 @@ class space_carving_2():
         return cd'''
         
 class space_carving_2_masks():
-    def __init__(self, dataset_path):
+    def __init__(self, dataset_path,gt_mode=False):
         self.masks_files = sorted (glob.glob(os.path.join(dataset_path, 'masks', '*.png')) )#get all .png file names from folder path
         self.extrinsics = self.load_extrinsics(os.path.join(dataset_path, 'extrinsics'))
         #self.bbox = json.load(open(os.path.join(dataset_path, 'bbox.json')))
@@ -164,8 +164,18 @@ class space_carving_2_masks():
         self.intrinsics= self.camera_model['params'][0:4]
         
         params = json.load(open(os.path.join(dataset_path, 'params.json')))
+
+
         #self.gt=o3d.io.read_point_cloud(params["gt_path"])
         #self.gt_points = np.asarray(self.gt.points)
+        self.gt_mode = gt_mode
+
+        if self.gt_mode is True:
+            self.gt = np.load(os.path.join(dataset_path, 'volumes','vol_180.npy'))
+            self.gt_solid_mask = np.where(self.gt==1,True,False) 
+            self.gt_n_solid_voxels = np.count_nonzero(self.gt_solid_mask)
+
+
         self.n_dilation=params["sc"]["n_dilation"]
         self.voxel_size = params['sc']['voxel_size']
         
@@ -180,11 +190,11 @@ class space_carving_2_masks():
         ext_files = glob.glob(os.path.join(path, '*.json'))
         assert len(ext_files) != 0,"json list is empty."
         for i in sorted(ext_files):                                                                                                                                     
-            ext.append(json.load(open(i)))                                                                                                                                                                                                                                                  
+            ext.append(json.load(open(i)))                                                                         
         return ext 
     
     def load_mask(self,idx):                                                                                                                                         
-        img = cv2.imread(self.masks_files[idx], cv2.IMREAD_GRAYSCALE)                                                                                                                                                                                                                                                                                                                                                                                     
+        img = cv2.imread(self.masks_files[idx], cv2.IMREAD_GRAYSCALE)
         return img
 
     def set_sc(self,bbox):
@@ -210,7 +220,30 @@ class space_carving_2_masks():
         if self.n_dilation:
             for k in range(self.n_dilation): mask = binary_dilation(mask)    
         self.sc.process_view(self.intrinsics, rot, tvec, mask)
-        
+
+
+    def gt_compare(self,test_vol):
+        if self.gt_mode is False:
+            return 0
+        #compare current volume with ground truth (voxelwise) and return percentage
+        comp = np.where( self.gt==test_vol,True,False)
+        eq_count = np.count_nonzero(comp)
+        #perc_sim = (eq_count/np.prod(gt_vol.shape) )*100.
+        #perc_sim = (eq_count/682176)*100. #682176number of voxels of the volumes used here 
+        perc_sim = eq_count * 0.00014658973637301812
+        return perc_sim
+    
+    def gt_compare_solid(self,test_vol):
+        if self.gt_mode is False:
+            return 0
+        #compares only solid voxels (with 1;s) between ground truth and test_vol  
+        vol_solid_mask = np.where(test_vol==1,True,False) 
+        vol_n_solid_voxels = np.count_nonzero(vol_solid_mask)
+        intersection = self.gt_solid_mask & vol_solid_mask
+        n_intersection = np.count_nonzero(intersection)
+        ratio = n_intersection / ( self.gt_n_solid_voxels + vol_n_solid_voxels - n_intersection )
+        return ratio
+    
     '''def dist_to_gt(self):
         vol = self.sc.values().copy()
         vol = vol.reshape(self.sc.shape)

@@ -24,9 +24,10 @@ class ScannerEnv(gym.Env):
     A template to implement custom OpenAI Gym environments
     """
     metadata = {'render.modes': ['human']}
-    def __init__(self,dataset_path,init_pos_inc_rst=False):
+    def __init__(self,dataset_path,init_pos_inc_rst=False,gt_mode=False):
         super(ScannerEnv, self).__init__()
         #self.__version__ = "7.0.1"
+        self.gt_mode = gt_mode
         self.n_images = 10 #number of images that must be collected 
         self.dataset_path = dataset_path
         self.n_positions = 180 #total of posible positions in env
@@ -59,7 +60,7 @@ class ScannerEnv(gym.Env):
 
         self.actions = {0:1,1:3,2:5,3:11,4:23,5:33,6:45,7:60,8:-60,9:-45,10:-33,11:-23,12:-11,13:-5,14:-3,15:-1,16:90}
         self.action_space = gym.spaces.Discrete(17)
-        
+
 
         #self._spec.id = "Romi-v0"
         self.reset()
@@ -71,6 +72,7 @@ class ScannerEnv(gym.Env):
         self.kept_abs_images = [] #real position of images in dataset
         self.kept_rel_images = [] #relative position used in environment
         self.state_rel_images = np.array([-1]*self.n_images) #used as part of state (-1 means empty)
+
                 
         self.current_position = 0
         
@@ -93,9 +95,9 @@ class ScannerEnv(gym.Env):
 
         if self.dataset_path == '':
             model = np.random.randint(10) #we use first 10 models from database for training
-            self.spc = space_carving_2_masks( os.path.join(MODELS_PATH,str(model).zfill(3)) )
+            self.spc = space_carving_2_masks( os.path.join(MODELS_PATH,str(model).zfill(3)) , self.gt_mode)
         else:
-            self.spc = space_carving_2_masks(self.dataset_path)
+            self.spc = space_carving_2_masks(self.dataset_path, self.gt_mode)
 
         
         self.spc.carve(self.absolute_position) 
@@ -111,6 +113,10 @@ class ScannerEnv(gym.Env):
         #self.current_state = ( self.zeros_test , self.state_rel_images)
         #self.current_state = ( vol.astype('float16') , np.zeros(self.n_images))
         #self.current_state = ( self.zeros_test , np.zeros(self.n_images))
+
+        if self.gt_mode is True:
+            self.last_gt_ratio = self.spc.gt_compare_solid(vol)
+            
 
         return self.current_state
 
@@ -155,7 +161,16 @@ class ScannerEnv(gym.Env):
         delta = self.h[0] - self.last_vspaces_count
         self.last_vspaces_count = self.h[0]
 
-        reward = min(delta,30000) / 30000
+
+        #calculate increment of solid voxels ratios between gt and currrent volume
+        if self.gt_mode is True:
+            gt_ratio = self.spc.gt_compare_solid(vol)
+            delta_gt_ratio = gt_ratio - self.last_gt_ratio
+            self.last_gt_ratio = gt_ratio
+            reward = delta_gt_ratio
+        
+        else:
+            reward = min(delta,30000) / 30000
         
 
         if self.num_steps >= (self.n_images-1):
