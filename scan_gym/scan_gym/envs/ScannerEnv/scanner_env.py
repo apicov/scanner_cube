@@ -25,10 +25,11 @@ class ScannerEnv(gym.Env):
     A template to implement custom OpenAI Gym environments
     """
     metadata = {'render.modes': ['human']}
-    def __init__(self,dataset_path,init_pos_inc_rst=False,gt_mode=False):
+    def __init__(self,dataset_path,init_pos_inc_rst=False,gt_mode=False,rotation_steps=-1):
         super(ScannerEnv, self).__init__()
         #self.__version__ = "7.0.1"
         self.gt_mode = gt_mode
+        self.rotation_steps = rotation_steps #simulates rotation of object (z axis) by n steps (for data augmentation), -1 for random rotation
         self.n_images = 10 #number of images that must be collected 
         self.dataset_path = dataset_path
         self.n_positions = 180 #total of posible positions in env
@@ -71,54 +72,55 @@ class ScannerEnv(gym.Env):
         self.num_steps = 0
         self.total_reward = 0
         self.done = False
-        self.kept_abs_images = [] #real position of images in dataset
-        self.kept_rel_images = [] #relative position used in environment
-        self.state_rel_images = np.array([-1]*self.n_images) #used as part of state (-1 means empty)
-
+        self.kept_images = [] # position of images in dataset
+        self.state_images = np.array([-1]*self.n_images) #used as part of state (-1 means empty)
+        self.h = [0,0,0] # count of empty,undetermined and solid voxels
+        self.last_vspaces_count = 0 #count of empty spaces (when not in gt mode)
                 
         self.current_position = 0
         
-        if self.init_pos_inc_rst : #position bias increases at every reset (like rotating plant in space)
+        if self.init_pos_inc_rst : #rotation bias increases at every reset (like rotating plant in space)
             if self.init_pos_counter >= self.n_positions:
                 self.init_pos_counter = 0
             self.position_bias = self.init_pos_counter
             self.init_pos_counter += 1
         else:
-            self.position_bias =  np.random.randint(0,self.n_positions)
+            if self.rotation_steps == -1: #rotation bias set randomly
+                self.position_bias =  np.random.randint(0,self.n_positions)
+            else:
+                self.position_bias = self.rotation_steps # use preset rotation bias
 
 
         #the image at the beginning position is always kept
-        self.kept_rel_images.append(0) #(self.current_position)
-        self.absolute_position = self.position_bias #( self.calculate_position(self.current_position,self.position_bias) )
-        self.kept_abs_images.append(self.absolute_position)
-
-        self.state_rel_images[0] = 0 #add first image to state
+        self.kept_images.append(0) #(self.current_position)
+    
+        self.state_images[0] = 0 #add first image to state
         
 
         if self.dataset_path == '':
             #model = np.random.randint(20) #we use first 10 models from database for training
             model = random.choice(self.rnd_train_models) #take random  model from available models list
-            self.spc = space_carving_2_masks( os.path.join(MODELS_PATH,str(model).zfill(3)) , self.gt_mode)
+            self.spc = space_carving_rotation( os.path.join(MODELS_PATH,str(model).zfill(3)) , gt_mode=self.gt_mode, rotation_steps=self.position_bias,total_positions=self.n_positions)
         else:
-            self.spc = space_carving_2_masks(self.dataset_path, self.gt_mode)
+            self.spc = space_carving_rotation(self.dataset_path, gt_mode=self.gt_mode,rotation_steps=self.position_bias,total_positions=self.n_positions)
 
         
-        self.spc.carve(self.absolute_position) 
+        self.spc.carve(self.current_position)
+        vol = self.spc.volume
         
-        #get number of -1's (empty space), 0's (undetermined) and 1's (solid) from 3d volume
-        vol = self.spc.sc.values()
-        self.h = [np.count_nonzero(vol == -1), np.count_nonzero(vol == 0), np.count_nonzero(vol == 1) ] 
-        #self.h = np.histogram(self.spc.sc.values(), bins=3)[0]
-        self.last_vspaces_count = self.h[0]   #spaces count from last sd volume carving
 
-        self.current_state = (vol.astype('float16') , self.state_rel_images) #self.spc.sc.values().astype('float16')
-        
+        if self.gt_mode is True:
+            self.last_gt_ratio = self.spc.gt_compare_solid()
+        else:
+            #get number of -1's (empty space), 0's (undetermined) and 1's (solid) from 3d volume
+            self.h = [np.count_nonzero(vol == -1), np.count_nonzero(vol == 0), np.count_nonzero(vol == 1) ] 
+            self.last_vspaces_count = self.h[0]   #spaces count from last sd volume carving
+
+
+        self.current_state = (vol.astype('float16') , self.state_images) #self.spc.sc.values().astype('float16')  
         #self.current_state = ( self.zeros_test , self.state_rel_images)
         #self.current_state = ( vol.astype('float16') , np.zeros(self.n_images))
         #self.current_state = ( self.zeros_test , np.zeros(self.n_images))
-
-        if self.gt_mode is True:
-            self.last_gt_ratio = self.spc.gt_compare_solid(vol)
             
 
         return self.current_state
@@ -141,53 +143,42 @@ class ScannerEnv(gym.Env):
         #move n steps from current position
         steps = self.actions[action]
         self.current_position = self.calculate_position(self.current_position, steps)
-        self.absolute_position = self.calculate_position(self.current_position,self.position_bias)
-        #---------------------------------------------------------------------------------
-        #self.current_position = action
-        #self.absolute_position = self.calculate_position(self.current_position,self.position_bias)
-        #--------------------------------------------------------------------------------------------
-        self.kept_rel_images.append(self.current_position)
-        self.kept_abs_images.append(self.absolute_position)
-
+       
+        self.kept_images.append(self.current_position)
         #add image to position state
-        self.state_rel_images[self.num_steps] = self.current_position
+        self.state_images[self.num_steps] = self.current_position
 
-        #carve in new position (absolute)
-        self.spc.carve(self.absolute_position) 
+        #carve in new position
+        self.spc.carve(self.current_position)
+        vol = self.spc.volume
 
-        #get number of -1's (empty space), 0's (undetermined) and 1's (solid) from 3d volume
-        vol = self.spc.sc.values()
-        self.h = [np.count_nonzero(vol == -1), np.count_nonzero(vol == 0), np.count_nonzero(vol == 1) ] #np.histogram(self.spc.sc.values(), bins=3)[0]
-        #self.h = np.histogram(self.spc.sc.values(), bins=3)[0]
-
-        #calculate increment of detected spaces since last carving
-        delta = self.h[0] - self.last_vspaces_count
-        self.last_vspaces_count = self.h[0]
-
-
-        #calculate increment of solid voxels ratios between gt and currrent volume
+        
         if self.gt_mode is True:
-            gt_ratio = self.spc.gt_compare_solid(vol)
+            #calculate increment of solid voxels ratios between gt and current volume
+            gt_ratio = self.spc.gt_compare_solid()
             delta_gt_ratio = gt_ratio - self.last_gt_ratio
             self.last_gt_ratio = gt_ratio
             reward = delta_gt_ratio
         
         else:
+            #get number of -1's (empty space), 0's (undetermined) and 1's (solid) from 3d volume
+            self.h = [np.count_nonzero(vol == -1), np.count_nonzero(vol == 0), np.count_nonzero(vol == 1) ] #np.histogram(self.spc.sc.values(), bins=3)[0]
+            #calculate increment of detected spaces since last carving
+            delta = self.h[0] - self.last_vspaces_count
+            self.last_vspaces_count = self.h[0]
             reward = min(delta,30000) / 30000
         
 
         if self.num_steps >= (self.n_images-1):
+            #get number of -1's (empty space), 0's (undetermined) and 1's (solid) from 3d volume
+            self.h = [np.count_nonzero(vol == -1), np.count_nonzero(vol == 0), np.count_nonzero(vol == 1) ]
+            self.last_vspaces_count = self.h[0]
             self.done = True
            
         self.total_reward += reward
 
-        #self.current_state = ( self.spc.sc.values() , self.current_position )
-
         
-        self.current_state = ( vol.astype('float16') , self.state_rel_images)
-
-
-
+        self.current_state = ( vol.astype('float16') , self.state_images)
         #self.current_state = ( self.zeros_test , self.state_rel_images)
         #self.current_state = ( vol.astype('float16') , np.zeros(self.n_images))
         #self.current_state = ( self.zeros_test , np.zeros(self.n_images))
