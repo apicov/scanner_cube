@@ -9,6 +9,8 @@ from utils import *
 import glob
 import os
 import csv
+from mpl_toolkits.mplot3d import Axes3D
+import matplotlib.pyplot as plt
 
 class space_carving_2_masks():
     def __init__(self, dataset_path):
@@ -16,6 +18,7 @@ class space_carving_2_masks():
         self.extrinsics = self.load_extrinsics(os.path.join(dataset_path, 'extrinsics'))
         #self.bbox = json.load(open(os.path.join(dataset_path, 'bbox.json')))
         self.bbox = json.load(open(os.path.join(dataset_path, '/home/pico/uni/romi/scanner_cube/bbox_min_max.json')))
+        #self.bbox = json.load(open(os.path.join(dataset_path, '/home/pico/uni/romi/scanner_cube/bbox_test.json')))
         self.camera_model = json.load(open(os.path.join(dataset_path, 'camera_model.json')))
         self.intrinsics= self.camera_model['params'][0:4]
         
@@ -76,10 +79,53 @@ class space_carving_2_masks():
         return cd'''
 
 
+
+
+def plot_save_vol(file_n,vol):
+    # importing required libraries
+    #from mpl_toolkits.mplot3d import Axes3D
+    #import matplotlib.pyplot as plt
+
+    x,y,z = np.where(vol[:64,:64,:128]==1)
+
+    # creating figure
+    fig = plt.figure()
+    ax = Axes3D(fig)
+
+    ax.set_xlim3d(0, 64)
+    ax.set_ylim3d(0, 64)
+    ax.set_zlim3d(0, 128)
+
+    # creating the plot
+    ax.scatter(x, y, z, color='green',s=1)
+
+    #x,y,z = np.where(d_vol==0)
+    #plot_geeks = ax.scatter(x, y, z, color='red',s=1)
+
+    # setting title and labels
+    ax.set_title("3D plot")
+    ax.set_xlabel('x-axis')
+    ax.set_ylabel('y-axis')
+    ax.set_zlabel('z-axis')
+    ax.grid()
+
+    # displaying the plot
+    #plt.show()
+    plt.savefig(file_n)
+
+
+
+    
 parent_dir = "/home/pico/uni/romi/scanner_cube/arabidopsis_im_bigger/"
 
+plots_dir = "/home/pico/uni/romi/models_plots"
+if not os.path.exists(plots_dir):
+        os.makedirs(plots_dir)
 
-for model in range(206):
+
+#check what bbox file is used!!!
+        
+for model in range(205):
     data_path = os.path.join( parent_dir,str(model).zfill(3) )
     dest_dir = os.path.join(data_path,'volumes')
     if not os.path.exists(dest_dir):
@@ -93,5 +139,6 @@ for model in range(206):
     #h = np.histogram(spc.sc.values(), bins=3)[0]
     
     np.save(os.path.join(dest_dir,'vol_180'), spc.sc.values())
+    plot_save_vol(os.path.join(plots_dir,str(model).zfill(3)+'b'),spc.sc.values())
     print("\r{}     ".format(model), end="")
-
+    #break

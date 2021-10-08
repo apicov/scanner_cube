@@ -15,6 +15,7 @@ from .utils import *
 import glob
 import os
 from .space_carving import *
+import random
 
 MODELS_PATH = '/home/pico/uni/romi/scanner_cube/arabidopsis_im_bigger/'
 
@@ -33,6 +34,7 @@ class ScannerEnv(gym.Env):
         self.n_positions = 180 #total of posible positions in env
         self.init_pos_inc_rst = init_pos_inc_rst #if false init position is random, if true, it starts in position 0 and increments by 1 position every reset
         self.init_pos_counter = 0
+        self.rnd_train_models = [1,3,25,39,41,6,9,11,14,22,0,20,28,36,48,201,202,203,204,205]  #models used when using random mode (path = '')
 
         self.zeros_test = np.zeros((66,68,152)).astype('float16')
         
@@ -94,7 +96,8 @@ class ScannerEnv(gym.Env):
         
 
         if self.dataset_path == '':
-            model = np.random.randint(10) #we use first 10 models from database for training
+            #model = np.random.randint(20) #we use first 10 models from database for training
+            model = random.choice(self.rnd_train_models) #take random  model from available models list
             self.spc = space_carving_2_masks( os.path.join(MODELS_PATH,str(model).zfill(3)) , self.gt_mode)
         else:
             self.spc = space_carving_2_masks(self.dataset_path, self.gt_mode)
