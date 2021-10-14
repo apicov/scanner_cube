@@ -17,7 +17,7 @@ import os
 from .space_carving import *
 import random
 
-MODELS_PATH = '/home/pico/uni/romi/scanner_cube/arabidopsis_im_bigger/'
+MODELS_PATH = '/home/pico/uni/romi/scanner_cube/arabidopsis_im_bigger/ramdisk'
 
 
 class ScannerEnv(gym.Env):
@@ -30,12 +30,13 @@ class ScannerEnv(gym.Env):
         #self.__version__ = "7.0.1"
         self.gt_mode = gt_mode
         self.rotation_steps = rotation_steps #simulates rotation of object (z axis) by n steps (for data augmentation), -1 for random rotation
-        self.n_images = 10 #number of images that must be collected 
+        self.n_images = 20 #number of images that must be collected 
         self.dataset_path = dataset_path
         self.n_positions = 180 #total of posible positions in env
         self.init_pos_inc_rst = init_pos_inc_rst #if false init position is random, if true, it starts in position 0 and increments by 1 position every reset
         self.init_pos_counter = 0
-        self.rnd_train_models = [1,3,25,39,41,6,9,11,14,22,0,20,28,36,48,201,202,203,204,205]  #models used when using random mode (path = '')
+        #self.rnd_train_models = [1,3,25,39,41,6,9,11,14,22,0,20,28,36,48,201,202,203,204,205]  #models used when using random mode (path = '')
+        self.rnd_train_models = [1,3,25,    6,9,11,   0,20,28, 201,202,203,204,205]  #models used when using random mode (path = '')
 
         self.zeros_test = np.zeros((66,68,152)).astype('float16')
         
