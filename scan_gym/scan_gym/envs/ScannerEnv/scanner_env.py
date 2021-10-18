@@ -30,7 +30,7 @@ class ScannerEnv(gym.Env):
         #self.__version__ = "7.0.1"
         self.gt_mode = gt_mode
         self.rotation_steps = rotation_steps #simulates rotation of object (z axis) by n steps (for data augmentation), -1 for random rotation
-        self.n_images = 20 #number of images that must be collected 
+        self.n_images = 5 #number of images that must be collected 
         self.dataset_path = dataset_path
         self.n_positions = 180 #total of posible positions in env
         self.init_pos_inc_rst = init_pos_inc_rst #if false init position is random, if true, it starts in position 0 and increments by 1 position every reset
@@ -64,6 +64,12 @@ class ScannerEnv(gym.Env):
 
         self.actions = {0:1,1:3,2:5,3:11,4:23,5:33,6:45,7:60,8:-60,9:-45,10:-33,11:-23,12:-11,13:-5,14:-3,15:-1,16:90}
         self.action_space = gym.spaces.Discrete(17)
+
+        #self.actions = {0:1, 1:9, 2:18, 3:27, 4:36, 5:45, 6:54, 7:63, 8:72, 9:81, 10:90, 11:99, 12:108, 13:117, 14:126, 15:135, 16:144, 17:153, 18:162, 19:178}
+        #self.action_space = gym.spaces.Discrete(20)
+
+        #self.actions = {0:1, 1:4, 2:10, 3:15, 4:20, 5:24, 6:30, 7:34, 8:39, 9:44, 10:-1, 11:-4, 12:-10, 13:-15, 14:-20, 15:-24, 16:-30, 17:-34, 18:-39, 19:-44}
+        #self.action_space = gym.spaces.Discrete(20)
 
 
         #self._spec.id = "Romi-v0"
@@ -119,6 +125,7 @@ class ScannerEnv(gym.Env):
 
 
         self.current_state = (vol.astype('float16') , self.state_images) #self.spc.sc.values().astype('float16')  
+
         #self.current_state = ( self.zeros_test , self.state_rel_images)
         #self.current_state = ( vol.astype('float16') , np.zeros(self.n_images))
         #self.current_state = ( self.zeros_test , np.zeros(self.n_images))
@@ -144,7 +151,9 @@ class ScannerEnv(gym.Env):
         #move n steps from current position
         steps = self.actions[action]
         self.current_position = self.calculate_position(self.current_position, steps)
-       
+        
+        
+        
         self.kept_images.append(self.current_position)
         #add image to position state
         self.state_images[self.num_steps] = self.current_position
@@ -180,6 +189,7 @@ class ScannerEnv(gym.Env):
 
         
         self.current_state = ( vol.astype('float16') , self.state_images)
+
         #self.current_state = ( self.zeros_test , self.state_rel_images)
         #self.current_state = ( vol.astype('float16') , np.zeros(self.n_images))
         #self.current_state = ( self.zeros_test , np.zeros(self.n_images))
