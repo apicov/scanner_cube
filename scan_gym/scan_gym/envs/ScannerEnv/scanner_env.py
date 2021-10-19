@@ -25,9 +25,10 @@ class ScannerEnv(gym.Env):
     A template to implement custom OpenAI Gym environments
     """
     metadata = {'render.modes': ['human']}
-    def __init__(self,dataset_path,init_pos_inc_rst=False,gt_mode=False,rotation_steps=-1):
+    def __init__(self,dataset_path,init_pos_inc_rst=False,gt_mode=True,rotation_steps=0,init_pos=0):
         super(ScannerEnv, self).__init__()
         #self.__version__ = "7.0.1"
+        self.init_pos = init_pos
         self.gt_mode = gt_mode
         self.rotation_steps = rotation_steps #simulates rotation of object (z axis) by n steps (for data augmentation), -1 for random rotation
         self.n_images = 5 #number of images that must be collected 
@@ -83,25 +84,30 @@ class ScannerEnv(gym.Env):
         self.state_images = np.array([-1]*self.n_images) #used as part of state (-1 means empty)
         self.h = [0,0,0] # count of empty,undetermined and solid voxels
         self.last_vspaces_count = 0 #count of empty spaces (when not in gt mode)
-                
-        self.current_position = 0
+
         
-        if self.init_pos_inc_rst : #rotation bias increases at every reset (like rotating plant in space)
+            
+        if self.init_pos_inc_rst : #initial position increases at every reset 
             if self.init_pos_counter >= self.n_positions:
                 self.init_pos_counter = 0
-            self.position_bias = self.init_pos_counter
+            self.current_position = self.init_pos_counter
             self.init_pos_counter += 1
         else:
-            if self.rotation_steps == -1: #rotation bias set randomly
-                self.position_bias =  np.random.randint(0,self.n_positions)
+            if self.init_pos = -1: #random inital position
+                self.current_position = np.random.randint(0,self.n_positions)
             else:
-                self.position_bias = self.rotation_steps # use preset rotation bias
+                self.current_position = self.init_pos
+         
+        if self.rotation_steps == -1: #rotation bias ( rotating plant) set randomly
+            self.position_bias =  np.random.randint(0,self.n_positions)
+        else:
+            self.position_bias = self.rotation_steps # use preset rotation bias
 
 
         #the image at the beginning position is always kept
-        self.kept_images.append(0) #(self.current_position)
+        self.kept_images.append(self.current_position)
     
-        self.state_images[0] = 0 #add first image to state
+        self.state_images[0] = self.current_position #add first image to state
         
 
         if self.dataset_path == '':
