@@ -31,13 +31,14 @@ class ScannerEnv(gym.Env):
         self.init_pos = init_pos
         self.gt_mode = gt_mode
         self.rotation_steps = rotation_steps #simulates rotation of object (z axis) by n steps (for data augmentation), -1 for random rotation
-        self.n_images = 5 #number of images that must be collected 
+        self.n_images = 10 #number of images that must be collected 
         self.dataset_path = dataset_path
         self.n_positions = 180 #total of posible positions in env
         self.init_pos_inc_rst = init_pos_inc_rst #if false init position is random, if true, it starts in position 0 and increments by 1 position every reset
         self.init_pos_counter = 0
         #self.rnd_train_models = [1,3,25,39,41,6,9,11,14,22,0,20,28,36,48,201,202,203,204,205]  #models used when using random mode (path = '')
-        self.rnd_train_models = [1,3,25,    6,9,11,   0,20,28, 201,202,203,204,205]  #models used when using random mode (path = '')
+        #self.rnd_train_models = [1,3,25,    6,9,11,   0,20,28, 201,202,203,204,205]  #models used when using random mode (path = '')
+        self.rnd_train_models = [1,3,    6,9,   0,20,   204,205]  #models used when using random mode (path = '')
 
         self.zeros_test = np.zeros((66,68,152)).astype('float16')
         
@@ -45,33 +46,27 @@ class ScannerEnv(gym.Env):
         self.im_ob_space = gym.spaces.Box(low=-1, high=1, shape=self.volume_shape, dtype=np.float16)
 
         #current position                                          
-        #lowl = np.array([0])
-        #highl = np.array([179])                                           
-        #self.vec_ob_space = gym.spaces.Box(lowl, highl, dtype=np.float32)
-        
-        #self.vec_ob_space  = spaces.Discrete(self.n_positions)
-
-        lowl = np.array([-1]*self.n_images)
-        highl = np.array([179]*self.n_images)                                           
+        lowl = np.array([0])
+        highl = np.array([179])                                           
         self.vec_ob_space = gym.spaces.Box(lowl, highl, dtype=np.int32)
+        
+        
+
+        '''lowl = np.array([-1]*self.n_images)
+        highl = np.array([179]*self.n_images)                                           
+        self.vec_ob_space = gym.spaces.Box(lowl, highl, dtype=np.int32)'''
 
 
         self.observation_space = gym.spaces.Tuple((self.im_ob_space, self.vec_ob_space))
+        #self.observation_space = self.im_ob_space
 
-        #self.actions = {0:90,1:3,2:5,3:11,4:23,5:45,6:-45,7:-23,8:-11,9:-5,10:-3}
-        #self.action_space = gym.spaces.Discrete(11)
 
-        #self.action_space = gym.spaces.Discrete(180)
 
-        self.actions = {0:1,1:3,2:5,3:11,4:23,5:33,6:45,7:60,8:-60,9:-45,10:-33,11:-23,12:-11,13:-5,14:-3,15:-1,16:90}
-        self.action_space = gym.spaces.Discrete(17)
-
-        #self.actions = {0:1, 1:9, 2:18, 3:27, 4:36, 5:45, 6:54, 7:63, 8:72, 9:81, 10:90, 11:99, 12:108, 13:117, 14:126, 15:135, 16:144, 17:153, 18:162, 19:178}
-        #self.action_space = gym.spaces.Discrete(20)
-
-        #self.actions = {0:1, 1:4, 2:10, 3:15, 4:20, 5:24, 6:30, 7:34, 8:39, 9:44, 10:-1, 11:-4, 12:-10, 13:-15, 14:-20, 15:-24, 16:-30, 17:-34, 18:-39, 19:-44}
-        #self.action_space = gym.spaces.Discrete(20)
-
+        #self.actions = {0:1,1:3,2:5,3:11,4:23,5:33,6:45,7:60,8:-60,9:-45,10:-33,11:-23,12:-11,13:-5,14:-3,15:-1,16:90}
+        #self.action_space = gym.spaces.Discrete(17)
+        
+        self.actions = {0:1,1:5,2:10,3:15,4:20,5:25,6:30,7:35,8:40,9:45,10:50,11:55,12:60,13:65,14:70,15:75,16:80,17:85,17:90}
+        self.action_space = gym.spaces.Discrete(18)
 
         #self._spec.id = "Romi-v0"
         self.reset()
@@ -93,7 +88,7 @@ class ScannerEnv(gym.Env):
             self.current_position = self.init_pos_counter
             self.init_pos_counter += 1
         else:
-            if self.init_pos = -1: #random inital position
+            if self.init_pos == -1: #random inital position
                 self.current_position = np.random.randint(0,self.n_positions)
             else:
                 self.current_position = self.init_pos
@@ -130,12 +125,18 @@ class ScannerEnv(gym.Env):
             self.last_vspaces_count = self.h[0]   #spaces count from last sd volume carving
 
 
-        self.current_state = (vol.astype('float16') , self.state_images) #self.spc.sc.values().astype('float16')  
+        #self.current_state = (vol.astype('float16') , self.state_images) #self.spc.sc.values().astype('float16')  
 
         #self.current_state = ( self.zeros_test , self.state_rel_images)
         #self.current_state = ( vol.astype('float16') , np.zeros(self.n_images))
         #self.current_state = ( self.zeros_test , np.zeros(self.n_images))
-            
+        #self.current_state = ( self.zeros_test , np.zeros(1))
+        #self.current_state = ( np.random.randint(-1,1, size= self.volume_shape).astype('float16'), np.array([self.current_position],dtype=int))
+        
+        
+        self.current_state = ( vol.astype('float16') , np.array([self.current_position],dtype=int))
+
+        #self.current_state = vol.astype('float16')
 
         return self.current_state
 
@@ -194,11 +195,17 @@ class ScannerEnv(gym.Env):
         self.total_reward += reward
 
         
-        self.current_state = ( vol.astype('float16') , self.state_images)
+        #self.current_state = ( vol.astype('float16') , self.state_images)
 
         #self.current_state = ( self.zeros_test , self.state_rel_images)
         #self.current_state = ( vol.astype('float16') , np.zeros(self.n_images))
         #self.current_state = ( self.zeros_test , np.zeros(self.n_images))
+        #self.current_state = ( self.zeros_test , np.zeros(1))
+        
+        self.current_state = ( vol.astype('float16') , np.array([self.current_position],dtype=int))
+
+        #self.current_state = ( np.random.randint(-1,1, size= self.volume_shape).astype('float16'), np.array([self.current_position],dtype=int))
+        #self.current_state = vol.astype('float16')
 
         return self.current_state, reward, self.done, {}
 

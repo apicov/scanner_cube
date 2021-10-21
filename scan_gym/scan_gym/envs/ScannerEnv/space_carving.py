@@ -317,10 +317,14 @@ class space_carving_rotation():
         im = self.load_mask(idx)
         self.space_carve(im, self.extrinsics[idx])
 
+        #when perspective does not change plane xy alwas points from position 0
         if self.rotation_steps == 0:
             self.volume = self.sc.values()
         else:
             self.volume = rotate(self.sc.values(),angle=self.rotation_steps*(360//self.total_positions),reshape=False)
+
+        #rotate according with position of camera plane xy is always point where camera sees
+        #self.volume = rotate(self.sc.values(),angle=-idx*(360//self.total_positions),reshape=False)
         
     def space_carve(self, mask, rt):
         #mask = im.copy() #get_mask(im)
